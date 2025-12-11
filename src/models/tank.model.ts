@@ -6,6 +6,13 @@
  * and potential for decoration or upgrades.
  */
 
+// On-chain fields (from Dojo/Starknet)
+export interface TankOnChain {
+  id: number;
+  owner: string;
+  capacity: number;
+}
+
 export interface Tank {
   id: number;
   owner: string;
