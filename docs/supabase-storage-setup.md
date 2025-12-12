@@ -1,40 +1,40 @@
 # Supabase Storage Setup
 
-Configuración de buckets de almacenamiento para assets del juego.
+Storage bucket configuration for game assets.
 
 ## Buckets
 
-Se crean 4 buckets públicos para lectura:
+4 public buckets are created for reading:
 
-- `fish` - Sprites de peces
-- `tanks` - Sprites de tanques
-- `decorations` - Sprites de decoraciones
-- `avatars` - Avatares de jugadores
+- `fish` - Fish sprites
+- `tanks` - Tank sprites
+- `decorations` - Decoration sprites
+- `avatars` - Player avatars
 
-## Convenciones de nombres
+## Naming Conventions
 
 - Fish: `fish-{id}.png`
 - Tanks: `tank-{id}.png`
 - Decorations: `decoration-{id}.png`
 - Avatars: `avatar-{player_address}.png`
 
-## Acceso
+## Access
 
-- **Lectura**: Público (accesible desde Unity client)
-- **Escritura**: Solo usuarios autenticados
+- **Read**: Public (accessible from Unity client)
+- **Write**: Authenticated users only
 
-## URLs públicas
+## Public URLs
 
 ```
 https://{supabase-url}/storage/v1/object/public/{bucket}/{filename}
 ```
 
-Ejemplo:
+Example:
 ```
 https://momjlqhhapbaigjwociq.supabase.co/storage/v1/object/public/fish/fish-1.png
 ```
 
-## Aplicar migración
+## Apply Migration
 
 ```bash
 npx supabase db push
