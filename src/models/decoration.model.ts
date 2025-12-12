@@ -14,23 +14,39 @@ export enum DecorationKind {
   Ornament = 'Ornament',
 }
 
-export interface Decoration {
+// On-chain fields (from Dojo/Starknet)
+export interface DecorationOnChain {
   id: number;
   owner: string;
   kind: DecorationKind;
-  // XP bonus percentage (e.g., 10 = +10%)
   xp_multiplier: number;
+}
+
+// Off-chain fields (from Supabase)
+export interface DecorationOffChain {
+  id: number;
+  owner: string;
+  kind: DecorationKind;
   is_active: boolean;
+  imageUrl?: string;
+  createdAt: Date;
+}
+
+// Combined decoration interface
+export interface Decoration extends DecorationOnChain, Omit<DecorationOffChain, 'id' | 'owner' | 'kind'> {
+  id: number;
 }
 
 export interface CreateDecorationDto {
+  id: number;
   owner: string;
   kind: DecorationKind;
-  xp_multiplier: number;
+  imageUrl?: string;
 }
 
 export interface UpdateDecorationDto {
   is_active?: boolean;
+  imageUrl?: string;
 }
 
 export interface ToggleDecorationDto {
