@@ -10,6 +10,7 @@ import { errorHandler } from './core/middleware/error-handler';
 import { registerRoutes } from './api';
 import { PORT, NODE_ENV } from './core/config';
 import { displayServerBanner } from './core/utils/server-banner';
+import { initializeLogger } from './core/utils/logger';
 
 /**
  * Creates and configures the Fastify application instance.
@@ -22,6 +23,9 @@ export async function createApp(): Promise<FastifyInstance> {
       level: NODE_ENV === 'production' ? 'info' : 'debug',
     },
   });
+
+  // Initialize global logger with Fastify instance
+  initializeLogger(app);
 
   // Register global error handler
   app.setErrorHandler(errorHandler);
