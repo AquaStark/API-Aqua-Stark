@@ -38,6 +38,7 @@ export async function displayServerBanner(): Promise<void> {
 📋  Available Endpoints:
    • GET  /health          Health check
    • GET  /api             API info
+   • POST /api/auth/login  Player login/registration
 
 ⏰  Started at:        ${startTime}
   `;

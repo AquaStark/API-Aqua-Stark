@@ -6,6 +6,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { authRoutes } from '@/api/auth.routes';
 
 /**
  * Registers all API routes with the Fastify instance.
@@ -14,6 +15,7 @@ import type { FastifyInstance } from 'fastify';
  */
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // Register route modules here
+  await app.register(authRoutes, { prefix: '/api' });
   // Example:
   // await app.register(playerRoutes, { prefix: '/api/player' });
   // await app.register(fishRoutes, { prefix: '/api/fish' });
