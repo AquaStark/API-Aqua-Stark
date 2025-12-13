@@ -10,15 +10,24 @@
 
 import { DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY } from '../config';
 import { logDebug, logInfo, logWarn } from './logger';
+import { getSupabaseClient } from './supabase-client';
 import {
   DojoTransactionResult,
   FishFamilyTree,
   FishFamilyMember,
   DecorationKind,
+  MintTankResult,
+  MintFishResult,
 } from '../types';
 
 // Flag to track if client is initialized
 let isInitialized = false;
+
+// Global counters that simulate on-chain FishCounter and TankCounter
+// These are synchronized with Supabase MAX(id) on initialization
+let fishCounter = 0;
+let tankCounter = 0;
+let countersInitialized = false;
 
 /**
  * Generates a mock transaction hash.
@@ -33,6 +42,128 @@ function generateMockTxHash(): string {
     hash += chars[Math.floor(Math.random() * chars.length)];
   }
   return hash;
+}
+
+/**
+ * Generates a random DNA string (simulates felt252 hex string).
+ * Used for starter pack fish with random genetics.
+ * 
+ * @returns Random DNA as hex string
+ */
+export function generateRandomDna(): string {
+  const chars = '0123456789abcdef';
+  let dna = '0x';
+  for (let i = 0; i < 32; i++) {
+    dna += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return dna;
+}
+
+// Track last known DB state to detect manual deletions
+let lastKnownFishMaxId: number | null = null;
+let lastKnownTankMaxId: number | null = null;
+
+/**
+ * Syncs counters with Supabase MAX(id) to ensure coherence.
+ * Detects when DB is empty after having data (manual deletion) and resets counters.
+ * 
+ * IMPORTANT: Only syncs on first call, then on each mint to detect deletions.
+ * Prevents resetting during consecutive ID generation in same minting session.
+ */
+async function syncCounters(): Promise<void> {
+  try {
+    const supabase = getSupabaseClient();
+
+    // Get MAX(id) from fish table
+    const { data: fishData, error: fishError } = await supabase
+      .from('fish')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (fishError && fishError.code === 'PGRST116') {
+      // DB is empty
+      if (!countersInitialized) {
+        // First initialization - reset to 0
+        fishCounter = 0;
+        lastKnownFishMaxId = null;
+      } else if (lastKnownFishMaxId !== null && lastKnownFishMaxId > 0) {
+        // DB was emptied manually (had data before, now empty) - reset counter
+        fishCounter = 0;
+        lastKnownFishMaxId = null;
+      }
+      // If lastKnownFishMaxId is null and already initialized, keep counter
+      // (DB was empty from start, don't reset during consecutive mints)
+    } else if (fishData?.id) {
+      // DB has data - sync to DB max, track last known value
+      fishCounter = Math.max(fishCounter, fishData.id);
+      lastKnownFishMaxId = fishData.id;
+    }
+
+    // Get MAX(id) from tanks table
+    const { data: tankData, error: tankError } = await supabase
+      .from('tanks')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (tankError && tankError.code === 'PGRST116') {
+      // DB is empty
+      if (!countersInitialized) {
+        // First initialization - reset to 0
+        tankCounter = 0;
+        lastKnownTankMaxId = null;
+      } else if (lastKnownTankMaxId !== null && lastKnownTankMaxId > 0) {
+        // DB was emptied manually (had data before, now empty) - reset counter
+        tankCounter = 0;
+        lastKnownTankMaxId = null;
+      }
+      // If lastKnownTankMaxId is null and already initialized, keep counter
+    } else if (tankData?.id) {
+      // DB has data - sync to DB max, track last known value
+      tankCounter = Math.max(tankCounter, tankData.id);
+      lastKnownTankMaxId = tankData.id;
+    }
+
+    if (!countersInitialized) {
+      countersInitialized = true;
+      logInfo(`Counters initialized: fishCounter=${fishCounter}, tankCounter=${tankCounter}`);
+    }
+  } catch (error) {
+    // If query fails completely, log but continue with current counters
+    logWarn('Failed to sync counters with database, using in-memory values', error);
+    if (!countersInitialized) {
+      countersInitialized = true;
+    }
+  }
+}
+
+/**
+ * Gets the next fish ID (simulates on-chain get_next_fish_id).
+ * Syncs with database before generating ID to detect manual deletions.
+ * Increments the counter and returns the new ID.
+ * 
+ * @returns Next available fish ID
+ */
+async function getNextFishId(): Promise<number> {
+  await syncCounters();
+  fishCounter++;
+  return fishCounter;
+}
+
+/**
+ * Gets the next tank ID (simulates on-chain get_next_tank_id).
+ * Syncs with database before generating ID to detect manual deletions.
+ * Increments the counter and returns the new ID.
+ * 
+ * @returns Next available tank ID
+ */
+async function getNextTankId(): Promise<number> {
+  await syncCounters();
+  tankCounter++;
+  return tankCounter;
 }
 
 /**
@@ -131,20 +262,41 @@ export async function gainPlayerXp(address: string, amount: number): Promise<str
 
 /**
  * Mints a new fish NFT for a player.
- * STUB: Returns mock transaction hash.
+ * STUB: Returns mock transaction hash and generated fish ID.
+ * 
+ * The contract creates a Fish with:
+ * - id = fish_id (from global FishCounter)
+ * - owner = address
+ * - state = "Baby"
+ * - xp = 0
+ * - is_ready_to_breed = false
+ * - species and dna as provided
  * 
  * @param address - Owner's wallet address
- * @returns Transaction hash
+ * @param species - Fish species identifier
+ * @param dna - Fish DNA string (felt252 hex)
+ * @returns MintFishResult with tx_hash and fish_id
  */
-export async function mintFish(address: string): Promise<string> {
-  logDebug(`[STUB] mintFish called with address: ${address}`);
+export async function mintFish(
+  address: string,
+  species: string,
+  dna: string
+): Promise<MintFishResult> {
+  logDebug(`[STUB] mintFish called - address: ${address}, species: ${species}, dna: ${dna}`);
   
   // TODO: Replace with real Dojo contract call
-  // const result = await contract.invoke('mint_fish', [address]);
+  // const result = await contract.invoke('mint_fish', [address, species, dna]);
   
-  const result = createMockTransactionResult();
-  logInfo(`Fish minted (stub): owner=${address}, tx: ${result.tx_hash}`);
-  return result.tx_hash;
+  // Generate next fish ID (simulates on-chain counter)
+  const fishId = await getNextFishId();
+  const txHash = generateMockTxHash();
+  
+  logInfo(`Fish minted (stub): owner=${address}, fish_id=${fishId}, species=${species}, tx: ${txHash}`);
+  
+  return {
+    tx_hash: txHash,
+    fish_id: fishId,
+  };
 }
 
 /**
@@ -239,20 +391,36 @@ export async function getFishFamilyTree(fishId: number): Promise<FishFamilyTree>
 
 /**
  * Mints a new tank NFT for a player.
- * STUB: Returns mock transaction hash.
+ * STUB: Returns mock transaction hash and generated tank ID.
+ * 
+ * The contract creates a Tank with:
+ * - id = tank_id (from global TankCounter)
+ * - owner = address
+ * - capacity = provided capacity (default 10)
  * 
  * @param address - Owner's wallet address
- * @returns Transaction hash
+ * @param capacity - Tank capacity (default: 10)
+ * @returns MintTankResult with tx_hash and tank_id
  */
-export async function mintTank(address: string): Promise<string> {
-  logDebug(`[STUB] mintTank called with address: ${address}`);
+export async function mintTank(
+  address: string,
+  capacity: number = 10
+): Promise<MintTankResult> {
+  logDebug(`[STUB] mintTank called - address: ${address}, capacity: ${capacity}`);
   
   // TODO: Replace with real Dojo contract call
-  // const result = await contract.invoke('mint_tank', [address]);
+  // const result = await contract.invoke('mint_tank', [address, capacity]);
   
-  const result = createMockTransactionResult();
-  logInfo(`Tank minted (stub): owner=${address}, tx: ${result.tx_hash}`);
-  return result.tx_hash;
+  // Generate next tank ID (simulates on-chain counter)
+  const tankId = await getNextTankId();
+  const txHash = generateMockTxHash();
+  
+  logInfo(`Tank minted (stub): owner=${address}, tank_id=${tankId}, capacity=${capacity}, tx: ${txHash}`);
+  
+  return {
+    tx_hash: txHash,
+    tank_id: tankId,
+  };
 }
 
 /**
