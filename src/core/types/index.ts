@@ -14,3 +14,14 @@ export type {
 
 export type { ControllerResponse } from './controller-response';
 
+export type {
+  DojoTransactionResult,
+  FishFamilyMember,
+  FishFamilyTree,
+  PlayerOnChain,
+  TankOnChain,
+  FishOnChain,
+  DecorationOnChain,
+} from './dojo-types';
+
+export { DecorationKind } from './dojo-types';

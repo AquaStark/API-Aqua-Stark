@@ -5,13 +5,18 @@
  */
 
 import { PORT, NODE_ENV } from '../config';
+import { validateSupabaseConnection } from './supabase-client';
 
 /**
  * Displays a beautiful server startup banner.
  */
-export function displayServerBanner(): void {
+export async function displayServerBanner(): Promise<void> {
   const isDevelopment = NODE_ENV === 'development';
   const isProduction = NODE_ENV === 'production';
+  
+  // Check Supabase connection
+  const supabaseConnected = await validateSupabaseConnection();
+  const supabaseStatus = supabaseConnected ? '✅ CONNECTED' : '❌ DISCONNECTED';
   
   const status = isDevelopment ? '🟢 RUNNING' : isProduction ? '🔵 PRODUCTION' : '🟡 STARTING';
   const env = NODE_ENV.toUpperCase();
@@ -24,14 +29,16 @@ export function displayServerBanner(): void {
 🐟  AQUA STARK BACKEND API  🐠
 
 🚀  Server Status:     ${status}
-🌐  Environment:      ${env}
+🌐  Environment:       ${env}
 🔌  Port:              ${port}
+🗄️  Supabase:          ${supabaseStatus}
 📍  Local URL:         ${localUrl}
 🌍  Network URL:       ${networkUrl}
 
 📋  Available Endpoints:
    • GET  /health          Health check
    • GET  /api             API info
+   • POST /api/auth/login  Player login/registration
 
 ⏰  Started at:        ${startTime}
   `;
@@ -42,4 +49,3 @@ export function displayServerBanner(): void {
     console.log('💡  Development mode: Hot reload enabled\n');
   }
 }
-
