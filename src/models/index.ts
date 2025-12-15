@@ -10,6 +10,7 @@ export type {
 
 export type {
   Fish,
+  FishSummary,
   CreateFishDto,
   UpdateFishDto,
 } from './fish.model';
