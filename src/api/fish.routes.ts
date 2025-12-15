@@ -15,7 +15,7 @@ import { getFishById } from '@/controllers/fish.controller';
  */
 export async function fishRoutes(
   app: FastifyInstance,
-  options: FastifyPluginOptions
+  _options: FastifyPluginOptions
 ): Promise<void> {
   // GET /fish/:id - Get fish details by ID
   app.get('/fish/:id', getFishById);

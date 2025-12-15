@@ -23,7 +23,7 @@ import { BaseError } from '../errors';
  */
 export async function errorHandler(
   error: FastifyError | Error,
-  request: FastifyRequest,
+  _request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   // Handle custom error classes

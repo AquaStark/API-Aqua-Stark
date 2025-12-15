@@ -15,7 +15,7 @@ import { getPlayerByAddress } from '@/controllers/player.controller';
  */
 export async function playerRoutes(
   app: FastifyInstance,
-  options: FastifyPluginOptions
+  _options: FastifyPluginOptions
 ): Promise<void> {
   // GET /player/:address - Get player by address
   app.get('/player/:address', getPlayerByAddress);

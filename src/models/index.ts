@@ -12,9 +12,7 @@ export type {
   Fish,
   CreateFishDto,
   UpdateFishDto,
-  FeedFishDto,
 } from './fish.model';
-export { FishState } from './fish.model';
 
 export type {
   Tank,

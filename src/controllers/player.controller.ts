@@ -28,7 +28,7 @@ const playerService = new PlayerService();
  */
 export async function getPlayerByAddress(
   request: FastifyRequest<{ Params: { address: string } }>,
-  reply: FastifyReply
+  _reply: FastifyReply
 ): Promise<ControllerResponse<Player>> {
   try {
     const { address } = request.params;

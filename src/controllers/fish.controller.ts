@@ -23,7 +23,7 @@ const fishService = new FishService();
  */
 export async function getFishById(
   request: FastifyRequest<{ Params: { id: string } }>,
-  reply: FastifyReply
+  _reply: FastifyReply
 ): Promise<ControllerResponse<Fish>> {
   try {
     const { id } = request.params;
