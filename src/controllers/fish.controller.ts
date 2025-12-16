@@ -45,3 +45,29 @@ export async function getFishById(
   }
 }
 
+/**
+ * GET /player/:address/fish
+ * 
+ * Retrieves all fish owned by a specific player.
+ * 
+ * @param request - Fastify request with address parameter
+ * @param reply - Fastify reply
+ * @returns Array of Fish data or error response
+ */
+export async function getFishByOwner(
+  request: FastifyRequest<{ Params: { address: string } }>,
+  _reply: FastifyReply
+): Promise<ControllerResponse<Fish[]>> {
+  try {
+    const { address } = request.params;
+    const fishList = await fishService.getFishByOwner(address);
+
+    return createSuccessResponse(
+      fishList,
+      'Fish retrieved successfully'
+    );
+  } catch (error) {
+    return createErrorResponse(error);
+  }
+}
+
