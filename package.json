@@ -7,7 +7,10 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "keywords": [
     "starknet",
@@ -32,8 +35,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@vitest/ui": "^4.0.16",
     "tsx": "^4.7.0",
-    "typescript": "5.3.3"
+    "typescript": "5.3.3",
+    "vitest": "^4.0.16"
   },
   "overrides": {
     "ws": "^8.18.0"
