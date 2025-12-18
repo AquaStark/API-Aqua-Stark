@@ -12,7 +12,7 @@
 import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
-import { getFishOnChain } from '@/core/utils/dojo-client';
+import { getFishOnChain, feedFishBatch } from '@/core/utils/dojo-client';
 import type { Fish } from '@/models/fish.model';
 
 // ============================================================================
@@ -203,6 +203,96 @@ export class FishService {
       // If on-chain fetch fails, we throw OnChainError as the fish is fundamentally an on-chain asset
       throw new OnChainError(
         `Failed to retrieve on-chain data for fish owned by ${address}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============================================================================
+  // FISH FEEDING
+  // ============================================================================
+
+  /**
+   * Feeds multiple fish in a batch operation.
+   * 
+   * Validates ownership of all fish, then calls the on-chain feed_fish_batch
+   * function which handles XP updates, last_fed_at timestamps, and applies
+   * XP multipliers based on active tank decorations.
+   * 
+   * The backend does NOT update Supabase - all state changes happen on-chain.
+   * Unity will query the updated state from the contract after receiving the tx_hash.
+   * 
+   * @param fishIds - Array of fish IDs to feed
+   * @param owner - Owner's Starknet wallet address (for ownership validation)
+   * @returns Transaction hash from the on-chain operation
+   * @throws {ValidationError} If fishIds is empty, owner is invalid, or any fish doesn't exist or belong to owner
+   * @throws {OnChainError} If the on-chain feed operation fails
+   */
+  async feedFishBatch(fishIds: number[], owner: string): Promise<string> {
+    // Validate fishIds array
+    if (!fishIds || !Array.isArray(fishIds) || fishIds.length === 0) {
+      throw new ValidationError('fish_ids must be a non-empty array');
+    }
+
+    // Validate each fish ID
+    for (const fishId of fishIds) {
+      if (!fishId || fishId <= 0 || !Number.isInteger(fishId)) {
+        throw new ValidationError(`Invalid fish ID: ${fishId}`);
+      }
+    }
+
+    // Validate owner address
+    if (!owner || owner.trim().length === 0) {
+      throw new ValidationError('Owner address is required');
+    }
+
+    // Basic Starknet address format validation (starts with 0x and is hex)
+    const addressPattern = /^0x[a-fA-F0-9]{63,64}$/;
+    if (!addressPattern.test(owner.trim())) {
+      throw new ValidationError('Invalid Starknet address format');
+    }
+
+    const supabase = getSupabaseClient();
+    const trimmedOwner = owner.trim();
+
+    // Validate that all fish exist and belong to the owner
+    const { data: fishList, error } = await supabase
+      .from('fish')
+      .select('id, owner')
+      .in('id', fishIds);
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    if (!fishList || fishList.length === 0) {
+      throw new ValidationError('None of the specified fish IDs exist');
+    }
+
+    // Check if all requested fish were found
+    if (fishList.length !== fishIds.length) {
+      const foundIds = fishList.map((f) => f.id);
+      const missingIds = fishIds.filter((id) => !foundIds.includes(id));
+      throw new NotFoundError(`Fish with IDs [${missingIds.join(', ')}] not found`);
+    }
+
+    // Validate ownership - all fish must belong to the specified owner
+    const invalidOwnership = fishList.filter((fish) => fish.owner !== trimmedOwner);
+    if (invalidOwnership.length > 0) {
+      const invalidIds = invalidOwnership.map((f) => f.id);
+      throw new ValidationError(
+        `Fish with IDs [${invalidIds.join(', ')}] do not belong to owner ${trimmedOwner}`
+      );
+    }
+
+    // Call on-chain feed_fish_batch function
+    // This updates XP, last_fed_at, applies XP multipliers, and handles state changes
+    try {
+      const txHash = await feedFishBatch(fishIds);
+      return txHash;
+    } catch (error) {
+      logError(`Failed to feed fish batch on-chain: [${fishIds.join(', ')}]`, error);
+      throw new OnChainError(
+        `Failed to feed fish batch: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
