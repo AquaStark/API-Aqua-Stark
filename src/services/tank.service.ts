@@ -94,7 +94,15 @@ export class TankService {
 
     // Map Supabase fish to FishSummary (off-chain data only)
     // For complete fish data with on-chain info, use GET /api/fish/:id endpoint
-    const fish: FishSummary[] = (fishList || []).map(f => ({
+    type SupabaseFishRow = {
+      id: number;
+      owner: string;
+      species: string;
+      image_url: string;
+      created_at: string;
+    };
+    
+    const fish: FishSummary[] = (fishList || []).map((f: SupabaseFishRow) => ({
       id: f.id,
       owner: f.owner,
       species: f.species,
