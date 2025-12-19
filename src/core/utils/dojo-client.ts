@@ -307,12 +307,21 @@ export async function mintFish(
  * STUB: Returns mock transaction hash.
  * 
  * @param fishIds - Array of fish IDs to feed
+ * @param xpValues - Optional array of XP values to grant to each fish (with multipliers already applied)
+ *                   If provided, must have the same length as fishIds
  * @returns Transaction hash
  */
-export async function feedFishBatch(fishIds: number[]): Promise<string> {
+export async function feedFishBatch(fishIds: number[], xpValues?: number[]): Promise<string> {
   logDebug(`[STUB] feedFishBatch called with fishIds: [${fishIds.join(', ')}]`);
   
+  if (xpValues) {
+    logDebug(`[STUB] feedFishBatch with XP values: [${xpValues.join(', ')}]`);
+  }
+  
   // TODO: Replace with real Dojo contract call
+  // If xpValues is provided, pass it to the contract:
+  // const result = await contract.invoke('feed_fish_batch', [fishIds, xpValues]);
+  // Otherwise, let the contract calculate XP internally:
   // const result = await contract.invoke('feed_fish_batch', [fishIds]);
   
   const result = createMockTransactionResult();
