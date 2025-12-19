@@ -13,6 +13,7 @@ import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getFishOnChain, feedFishBatch } from '@/core/utils/dojo-client';
+import { getActiveDecorationsMultiplier } from '@/core/utils/xp-calculator';
 import type { Fish } from '@/models/fish.model';
 
 // ============================================================================
@@ -307,7 +308,24 @@ export class FishService {
     // This will be used in the next steps to calculate decoration multipliers
     const tankId: number | null = tankData?.id ?? null;
 
-    // TODO: Use tankId to calculate decoration multipliers in next step
+    // Calculate decoration multiplier for the tank
+    // getActiveDecorationsMultiplier returns a decimal (e.g., 0.15 for 15%)
+    // We need to convert it to percentage (15) for calculateFishXp()
+    let multiplierPercentage = 0;
+    
+    if (tankId !== null) {
+      try {
+        const multiplierDecimal = await getActiveDecorationsMultiplier(tankId);
+        // Convert decimal to percentage: 0.15 -> 15
+        multiplierPercentage = multiplierDecimal * 100;
+      } catch (error) {
+        // If multiplier calculation fails, log error and use 0 (no bonus XP)
+        logError(`Failed to calculate decoration multiplier for tank ${tankId}, using 0`, error);
+        multiplierPercentage = 0;
+      }
+    }
+    // If tankId is null, multiplierPercentage remains 0 (no active decorations)
+    // multiplierPercentage will be used in the next steps to calculate final XP
 
     // Call on-chain feed_fish_batch function
     // This updates XP, last_fed_at, applies XP multipliers, and handles state changes
