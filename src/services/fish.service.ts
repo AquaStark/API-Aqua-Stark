@@ -13,7 +13,7 @@ import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getFishOnChain, feedFishBatch } from '@/core/utils/dojo-client';
-import { getActiveDecorationsMultiplier, getFeedBaseXp } from '@/core/utils/xp-calculator';
+import { getActiveDecorationsMultiplier, getFeedBaseXp, calculateFishXp } from '@/core/utils/xp-calculator';
 import type { Fish } from '@/models/fish.model';
 
 // ============================================================================
@@ -216,9 +216,14 @@ export class FishService {
    * Feeds multiple fish in a batch operation.
    * 
    * Validates ownership of all fish, retrieves the tank for the owner to calculate
-   * decoration multipliers, then calls the on-chain feed_fish_batch function which
-   * handles XP updates, last_fed_at timestamps, and applies XP multipliers based
-   * on active tank decorations.
+   * decoration multipliers, calculates final XP with multipliers applied, then calls
+   * the on-chain feed_fish_batch function which handles XP updates and last_fed_at timestamps.
+   * 
+   * The XP calculation process:
+   * 1. Gets base XP from food type (default: 10 XP)
+   * 2. Gets active decorations multiplier for the tank
+   * 3. Calculates final XP = baseXp * (1 + multiplier/100)
+   * 4. Passes calculated XP values to on-chain function
    * 
    * The backend does NOT update Supabase - all state changes happen on-chain.
    * Unity will query the updated state from the contract after receiving the tx_hash.
@@ -331,10 +336,18 @@ export class FishService {
     // TODO: In the future, this can accept a foodType parameter from the request
     const baseXp = getFeedBaseXp(); // Defaults to FoodType.Basic (10 XP)
 
+    // Calculate final XP for each fish applying decoration multiplier
+    // All fish in the batch belong to the same owner/tank, so they all get the same multiplier
+    const finalXp = calculateFishXp(baseXp, multiplierPercentage);
+    
+    // Calculate XP values for all fish (same value for all since they share the same tank)
+    const fishXpValues = fishIds.map(() => finalXp);
+
     // Call on-chain feed_fish_batch function
     // This updates XP, last_fed_at, applies XP multipliers, and handles state changes
+    // Pass calculated XP values so the on-chain function can update XP with multipliers applied
     try {
-      const txHash = await feedFishBatch(fishIds);
+      const txHash = await feedFishBatch(fishIds, fishXpValues);
       return txHash;
     } catch (error) {
       logError(`Failed to feed fish batch on-chain: [${fishIds.join(', ')}]`, error);
