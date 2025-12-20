@@ -5,7 +5,7 @@
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getFishById, getFishByOwner, feedFish } from '@/controllers/fish.controller';
+import { getFishById, getFishByOwner, feedFish, breedFish } from '@/controllers/fish.controller';
 
 /**
  * Registers fish routes with the Fastify instance.
@@ -25,5 +25,8 @@ export async function fishRoutes(
 
   // POST /fish/feed - Feed multiple fish in a batch operation
   app.post('/fish/feed', feedFish);
+
+  // POST /fish/breed - Breed two fish together to create offspring
+  app.post('/fish/breed', breedFish);
 }
 
