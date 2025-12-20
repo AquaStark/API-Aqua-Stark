@@ -31,7 +31,7 @@ export async function getTankById(
   try {
     const { id } = request.params;
     const tankId = parseInt(id, 10);
-    
+
     // Basic validation before service call
     if (isNaN(tankId)) {
       throw new Error('Invalid tank ID format');
@@ -42,6 +42,33 @@ export async function getTankById(
     return createSuccessResponse(
       tank,
       'Tank retrieved successfully'
+    );
+  } catch (error) {
+    return createErrorResponse(error);
+  }
+}
+
+/**
+ * GET /player/:address/tanks
+ * 
+ * Retrieves all tanks owned by a specific player.
+ * Includes fish count and capacity usage for each tank.
+ * 
+ * @param request - Fastify request with address parameter
+ * @param reply - Fastify reply
+ * @returns Array of Tank data with fish count or error response
+ */
+export async function getTanksByOwner(
+  request: FastifyRequest<{ Params: { address: string } }>,
+  _reply: FastifyReply
+): Promise<ControllerResponse<(Tank & { fishCount: number; capacityUsage: number })[]>> {
+  try {
+    const { address } = request.params;
+    const tanksList = await tankService.getTanksByOwner(address);
+
+    return createSuccessResponse(
+      tanksList,
+      'Tanks retrieved successfully'
     );
   } catch (error) {
     return createErrorResponse(error);

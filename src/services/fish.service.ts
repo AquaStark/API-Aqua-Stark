@@ -25,7 +25,7 @@ import { FishState } from '@/models/fish.model';
  * Service for managing fish data and operations.
  */
 export class FishService {
-  
+
   // ============================================================================
   // FISH RETRIEVAL
   // ============================================================================
@@ -81,7 +81,7 @@ export class FishService {
         hunger: fishOnChain.hunger,
         isReadyToBreed: fishOnChain.isReadyToBreed,
         dna: fishOnChain.dna,
-        
+
         // Off-chain data
         owner: fishOffChain.owner,
         species: fishOffChain.species,
@@ -318,7 +318,7 @@ export class FishService {
     // getActiveDecorationsMultiplier returns a decimal (e.g., 0.15 for 15%)
     // We need to convert it to percentage (15) for calculateFishXp()
     let multiplierPercentage = 0;
-    
+
     if (tankId !== null) {
       try {
         const multiplierDecimal = await getActiveDecorationsMultiplier(tankId);
@@ -340,7 +340,7 @@ export class FishService {
     // Calculate final XP for each fish applying decoration multiplier
     // All fish in the batch belong to the same owner/tank, so they all get the same multiplier
     const finalXp = calculateFishXp(baseXp, multiplierPercentage);
-    
+
     // Calculate XP values for all fish (same value for all since they share the same tank)
     const fishXpValues = fishIds.map(() => finalXp);
 

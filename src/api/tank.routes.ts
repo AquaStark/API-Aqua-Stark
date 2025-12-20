@@ -5,7 +5,7 @@
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getTankById } from '@/controllers/tank.controller';
+import { getTankById, getTanksByOwner } from '@/controllers/tank.controller';
 
 /**
  * Registers tank routes with the Fastify instance.
@@ -19,5 +19,8 @@ export async function tankRoutes(
 ): Promise<void> {
   // GET /tank/:id - Get tank details by ID
   app.get('/tank/:id', getTankById);
+
+  // GET /player/:address/tanks - Get all tanks owned by a player
+  app.get('/player/:address/tanks', getTanksByOwner);
 }
 
