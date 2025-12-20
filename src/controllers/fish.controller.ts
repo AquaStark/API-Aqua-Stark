@@ -8,7 +8,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { ControllerResponse } from '@/core/types/controller-response';
 import { createSuccessResponse, createErrorResponse } from '@/core/responses';
 import { FishService } from '@/services/fish.service';
-import type { Fish, FeedFishBatchDto } from '@/models/fish.model';
+import type { Fish, FeedFishBatchDto, BreedFishDto } from '@/models/fish.model';
 
 const fishService = new FishService();
 
@@ -103,6 +103,49 @@ export async function feedFish(
     return createSuccessResponse(
       { tx_hash: txHash },
       'Fish fed successfully'
+    );
+  } catch (error) {
+    return createErrorResponse(error);
+  }
+}
+
+/**
+ * POST /fish/breed
+ * 
+ * Breeds two fish together to create offspring.
+ * Validates breeding conditions (both must be adults and ready to breed),
+ * creates a new fish on-chain, saves it to Supabase with parent references,
+ * and updates player statistics.
+ * 
+ * @param request - Fastify request with BreedFishDto in body
+ * @param reply - Fastify reply
+ * @returns Newly created Fish or error response
+ */
+export async function breedFish(
+  request: FastifyRequest<{ Body: BreedFishDto }>,
+  _reply: FastifyReply
+): Promise<ControllerResponse<Fish>> {
+  try {
+    const { fish1_id, fish2_id, owner } = request.body;
+
+    // Basic validation before service call (service does stricter validation)
+    if (!fish1_id || typeof fish1_id !== 'number') {
+      throw new Error('fish1_id must be a number');
+    }
+
+    if (!fish2_id || typeof fish2_id !== 'number') {
+      throw new Error('fish2_id must be a number');
+    }
+
+    if (!owner) {
+      throw new Error('owner is required');
+    }
+
+    const newFish = await fishService.breedFish(fish1_id, fish2_id, owner);
+
+    return createSuccessResponse(
+      newFish,
+      'Fish bred successfully'
     );
   } catch (error) {
     return createErrorResponse(error);
