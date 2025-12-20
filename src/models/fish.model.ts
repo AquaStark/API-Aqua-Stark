@@ -57,3 +57,13 @@ export interface FeedFishBatchDto {
   fish_ids: number[];
   owner: string;
 }
+
+/**
+ * DTO for breeding two fish together.
+ * Used in POST /fish/breed endpoint.
+ */
+export interface BreedFishDto {
+  fish1_id: number;
+  fish2_id: number;
+  owner: string;
+}

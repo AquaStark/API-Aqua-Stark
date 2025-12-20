@@ -24,6 +24,40 @@ export const JUVENILE_MAX_XP = 150;
 export const YOUNG_ADULT_MAX_XP = 350;
 
 /**
+ * Types of food that can be given to fish.
+ * This enum can be extended in the future to support different food types.
+ */
+export enum FoodType {
+  Basic = 'Basic',
+  // Future food types can be added here:
+  // Premium = 'Premium',
+  // Special = 'Special',
+}
+
+/**
+ * Default XP base value when feeding a fish.
+ * This is the base XP gained before applying decoration multipliers.
+ */
+export const DEFAULT_FEED_BASE_XP = 10;
+
+/**
+ * XP base values per food type.
+ * 
+ * This mapping allows different food types to grant different base XP amounts.
+ * To add a new food type:
+ * 1. Add it to the FoodType enum
+ * 2. Add an entry here with the desired XP value
+ * 
+ * Values represent base XP before multipliers are applied.
+ */
+export const FOOD_TYPE_BASE_XP: Record<FoodType, number> = {
+  [FoodType.Basic]: DEFAULT_FEED_BASE_XP,
+  // Future food types:
+  // [FoodType.Premium]: 20,
+  // [FoodType.Special]: 30,
+};
+
+/**
  * Default XP percentage multipliers per decoration kind.
  *
  * Values are percentages, e.g. 10 means +10% XP.
@@ -35,6 +69,21 @@ export const DECORATION_XP_MULTIPLIERS: Record<DecorationKind, number> = {
   [DecorationKind.Background]: 2,
   [DecorationKind.Ornament]: 3,
 };
+
+/**
+ * Gets the base XP value for a given food type.
+ * Returns the default base XP if food type is not provided or not found.
+ *
+ * @param foodType - Optional food type (defaults to FoodType.Basic)
+ * @returns Base XP value for the food type
+ */
+export function getFeedBaseXp(foodType?: FoodType): number {
+  if (!foodType) {
+    return DEFAULT_FEED_BASE_XP;
+  }
+  
+  return FOOD_TYPE_BASE_XP[foodType] ?? DEFAULT_FEED_BASE_XP;
+}
 
 /**
  * Calculates fish XP applying a percentage multiplier.
