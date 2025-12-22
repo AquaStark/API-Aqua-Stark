@@ -402,10 +402,14 @@ export async function getFishFamilyTree(fishId: number): Promise<FishFamilyTree>
     { id: fishId + 101, parent1_id: null, parent2_id: null, generation: 1 },
   ];
 
+  const descendants: FishFamilyMember[] = [];
+
   const familyTree: FishFamilyTree = {
     fish_id: fishId,
     ancestors,
+    descendants,
     generation_count: 2,
+    descendant_generation_count: 0,
   };
 
   logInfo(`Fish family tree retrieved (stub): fish=${fishId}, generations=${familyTree.generation_count}`);

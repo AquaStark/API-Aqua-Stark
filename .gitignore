@@ -31,6 +31,10 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+tests/**/*.js
+tests/**/*.d.ts
+tests/**/*.js.map
+tests/**/*.d.ts.map
 
 # Temporary files
 tmp/

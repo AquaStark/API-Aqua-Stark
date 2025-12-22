@@ -39,12 +39,14 @@ export interface FishFamilyMember {
 
 /**
  * Complete family tree structure for a fish.
- * Includes the fish itself and all ancestors.
+ * Includes the fish itself, all ancestors, and all descendants.
  */
 export interface FishFamilyTree {
   fish_id: number;
   ancestors: FishFamilyMember[];
+  descendants: FishFamilyMember[];
   generation_count: number;
+  descendant_generation_count: number;
 }
 
 /**
