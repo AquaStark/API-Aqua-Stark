@@ -12,6 +12,8 @@ vi.mock('@/core/utils/supabase-client', () => ({
 vi.mock('@/core/utils/dojo-client', () => ({
   feedFishBatch: vi.fn(),
   getFishOnChain: vi.fn(),
+  gainFishXp: vi.fn(),
+  gainPlayerXp: vi.fn(),
 }));
 
 vi.mock('@/core/utils/xp-calculator', () => ({
@@ -26,9 +28,9 @@ vi.mock('@/core/utils/logger', () => ({
 
 // Now import after mocks
 import { FishService } from '@/services/fish.service';
-import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
+import { ValidationError, OnChainError } from '@/core/errors';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
-import { feedFishBatch as dojoFeedFishBatch } from '@/core/utils/dojo-client';
+import { gainFishXp, gainPlayerXp } from '@/core/utils/dojo-client';
 import { getActiveDecorationsMultiplier, getFeedBaseXp, calculateFishXp } from '@/core/utils/xp-calculator';
 
 describe('FishService', () => {
@@ -61,7 +63,8 @@ describe('FishService', () => {
       // Default mocks
       vi.mocked(getFeedBaseXp).mockReturnValue(10);
       // calculateFishXp will be mocked per test as needed
-      vi.mocked(dojoFeedFishBatch).mockResolvedValue('0xtxhash123');
+      vi.mocked(gainFishXp).mockResolvedValue('0xfishTxHash');
+      vi.mocked(gainPlayerXp).mockResolvedValue('0xplayerTxHash');
     });
 
     it('should successfully feed fish with decoration multiplier', async () => {
@@ -78,10 +81,37 @@ describe('FishService', () => {
           error: null,
         }),
       };
+      const playerQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { total_xp: 100 },
+          error: null,
+        }),
+      };
+      const updateQuery = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+      const insertQuery = {
+        insert: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
 
       mockSupabase.from
         .mockReturnValueOnce(fishQuery) // fish query
-        .mockReturnValueOnce(tankQuery); // tank query
+        .mockReturnValueOnce(tankQuery) // tank query
+        .mockReturnValueOnce(playerQuery) // player query
+        .mockReturnValueOnce(updateQuery) // player update
+        .mockReturnValueOnce(insertQuery) // sync queue entries (fish)
+        .mockReturnValueOnce(insertQuery) // sync queue entries (fish)
+        .mockReturnValueOnce(insertQuery) // sync queue entries (fish)
+        .mockReturnValueOnce(insertQuery); // sync queue entry (player)
 
       fishQuery.in.mockResolvedValue({
         data: fishIds.map((id) => ({ id, owner })),
@@ -96,14 +126,17 @@ describe('FishService', () => {
       const result = await service.feedFishBatch(fishIds, owner);
 
       // Assert
-      expect(result).toBe('0xtxhash123');
+      expect(result).toBe('0xplayerTxHash');
       expect(getFeedBaseXp).toHaveBeenCalled();
       expect(getActiveDecorationsMultiplier).toHaveBeenCalledWith(tankId);
       expect(calculateFishXp).toHaveBeenCalledWith(10, 15); // baseXp=10, multiplier=15%
-      expect(dojoFeedFishBatch).toHaveBeenCalledWith(
-        fishIds,
-        [11.5, 11.5, 11.5] // All fish get same XP value
-      );
+      // Should call gainFishXp for each fish
+      expect(gainFishXp).toHaveBeenCalledTimes(3);
+      fishIds.forEach((fishId) => {
+        expect(gainFishXp).toHaveBeenCalledWith(fishId, 11.5);
+      });
+      // Should call gainPlayerXp with total XP (11.5 * 3 = 34.5)
+      expect(gainPlayerXp).toHaveBeenCalledWith(owner, 34.5);
     });
 
     it('should handle case when owner has no tank (multiplier = 0)', async () => {
@@ -120,10 +153,37 @@ describe('FishService', () => {
           error: { code: 'PGRST116' }, // Not found
         }),
       };
+      const playerQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { total_xp: 100 },
+          error: null,
+        }),
+      };
+      const updateQuery = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+      const insertQuery = {
+        insert: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
 
       mockSupabase.from
         .mockReturnValueOnce(fishQuery)
-        .mockReturnValueOnce(tankQuery);
+        .mockReturnValueOnce(tankQuery)
+        .mockReturnValueOnce(playerQuery)
+        .mockReturnValueOnce(updateQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery);
 
       fishQuery.in.mockResolvedValue({
         data: fishIds.map((id) => ({ id, owner })),
@@ -137,13 +197,14 @@ describe('FishService', () => {
       const result = await service.feedFishBatch(fishIds, owner);
 
       // Assert
-      expect(result).toBe('0xtxhash123');
+      expect(result).toBe('0xplayerTxHash');
       expect(getActiveDecorationsMultiplier).not.toHaveBeenCalled();
       expect(calculateFishXp).toHaveBeenCalledWith(10, 0); // multiplier = 0
-      expect(dojoFeedFishBatch).toHaveBeenCalledWith(
-        fishIds,
-        [10, 10, 10] // baseXp without multiplier
-      );
+      expect(gainFishXp).toHaveBeenCalledTimes(3);
+      fishIds.forEach((fishId) => {
+        expect(gainFishXp).toHaveBeenCalledWith(fishId, 10);
+      });
+      expect(gainPlayerXp).toHaveBeenCalledWith(owner, 30); // 10 * 3
     });
 
     it('should handle case when no active decorations (multiplier = 0)', async () => {
@@ -160,10 +221,37 @@ describe('FishService', () => {
           error: null,
         }),
       };
+      const playerQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { total_xp: 100 },
+          error: null,
+        }),
+      };
+      const updateQuery = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+      const insertQuery = {
+        insert: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
 
       mockSupabase.from
         .mockReturnValueOnce(fishQuery)
-        .mockReturnValueOnce(tankQuery);
+        .mockReturnValueOnce(tankQuery)
+        .mockReturnValueOnce(playerQuery)
+        .mockReturnValueOnce(updateQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery);
 
       fishQuery.in.mockResolvedValue({
         data: fishIds.map((id) => ({ id, owner })),
@@ -178,13 +266,14 @@ describe('FishService', () => {
       const result = await service.feedFishBatch(fishIds, owner);
 
       // Assert
-      expect(result).toBe('0xtxhash123');
+      expect(result).toBe('0xplayerTxHash');
       expect(getActiveDecorationsMultiplier).toHaveBeenCalledWith(tankId);
       expect(calculateFishXp).toHaveBeenCalledWith(10, 0);
-      expect(dojoFeedFishBatch).toHaveBeenCalledWith(
-        fishIds,
-        [10, 10, 10]
-      );
+      expect(gainFishXp).toHaveBeenCalledTimes(3);
+      fishIds.forEach((fishId) => {
+        expect(gainFishXp).toHaveBeenCalledWith(fishId, 10);
+      });
+      expect(gainPlayerXp).toHaveBeenCalledWith(owner, 30); // 10 * 3
     });
 
     it('should throw ValidationError for empty fishIds array', async () => {
@@ -242,9 +331,37 @@ describe('FishService', () => {
         }),
       };
 
+      const playerQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { total_xp: 100 },
+          error: null,
+        }),
+      };
+      const updateQuery = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+      const insertQuery = {
+        insert: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+
       mockSupabase.from
         .mockReturnValueOnce(fishQuery)
-        .mockReturnValueOnce(tankQuery);
+        .mockReturnValueOnce(tankQuery)
+        .mockReturnValueOnce(playerQuery)
+        .mockReturnValueOnce(updateQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery);
 
       fishQuery.in.mockResolvedValue({
         data: fishIds.map((id) => ({ id, owner })),
@@ -259,8 +376,13 @@ describe('FishService', () => {
       const result = await service.feedFishBatch(fishIds, owner);
 
       // Assert: Should continue with multiplier = 0
-      expect(result).toBe('0xtxhash123');
+      expect(result).toBe('0xplayerTxHash');
       expect(calculateFishXp).toHaveBeenCalledWith(10, 0);
+      expect(gainFishXp).toHaveBeenCalledTimes(3);
+      fishIds.forEach((fishId) => {
+        expect(gainFishXp).toHaveBeenCalledWith(fishId, 10);
+      });
+      expect(gainPlayerXp).toHaveBeenCalledWith(owner, 30); // 10 * 3
     });
 
     it('should throw OnChainError when on-chain feed fails', async () => {
@@ -289,7 +411,7 @@ describe('FishService', () => {
 
       vi.mocked(getActiveDecorationsMultiplier).mockResolvedValue(0);
       vi.mocked(calculateFishXp).mockReturnValue(10);
-      vi.mocked(dojoFeedFishBatch).mockRejectedValue(new Error('On-chain error'));
+      vi.mocked(gainFishXp).mockRejectedValue(new Error('On-chain error'));
 
       // Act & Assert
       await expect(service.feedFishBatch(fishIds, owner)).rejects.toThrow(OnChainError);
@@ -311,9 +433,39 @@ describe('FishService', () => {
         }),
       };
 
+      const playerQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { total_xp: 100 },
+          error: null,
+        }),
+      };
+      const updateQuery = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+      const insertQuery = {
+        insert: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+
       mockSupabase.from
         .mockReturnValueOnce(fishQuery)
-        .mockReturnValueOnce(tankQuery);
+        .mockReturnValueOnce(tankQuery)
+        .mockReturnValueOnce(playerQuery)
+        .mockReturnValueOnce(updateQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery)
+        .mockReturnValueOnce(insertQuery);
 
       fishQuery.in.mockResolvedValue({
         data: multipleFishIds.map((id) => ({ id, owner })),
@@ -327,10 +479,11 @@ describe('FishService', () => {
       await service.feedFishBatch(multipleFishIds, owner);
 
       // Assert: All fish should get the same XP value
-      expect(dojoFeedFishBatch).toHaveBeenCalledWith(
-        multipleFishIds,
-        [12, 12, 12, 12, 12] // All 5 fish get same XP
-      );
+      expect(gainFishXp).toHaveBeenCalledTimes(5);
+      multipleFishIds.forEach((fishId) => {
+        expect(gainFishXp).toHaveBeenCalledWith(fishId, 12);
+      });
+      expect(gainPlayerXp).toHaveBeenCalledWith(owner, 60); // 12 * 5
     });
   });
 });
