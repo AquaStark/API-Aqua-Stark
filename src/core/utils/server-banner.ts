@@ -58,6 +58,8 @@ export async function displayServerBanner(): Promise<void> {
    
    Decorations:
    • GET  /api/decoration/:id            Get decoration details by ID
+   • GET  /api/player/:address/decorations Get all decorations owned by a player
+   • POST /api/decoration/:id/activate    Activate a decoration
 
 ⏰  Started at:        ${startTime}
   `;
