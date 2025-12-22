@@ -31,6 +31,20 @@ const ALLOWED_EXTENSIONS = [
   '.glb', '.gltf', '.fbx', '.obj'           // 3D Assets
 ];
 
+// Image-only MIME types for tank sprites
+const ALLOWED_IMAGE_MIME_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+];
+
+// Image-only file extensions for tank sprites
+const ALLOWED_IMAGE_EXTENSIONS = [
+  '.png', '.jpg', '.jpeg', '.gif', '.webp',
+];
+
 // Max file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -143,6 +157,103 @@ export class AssetService {
       await supabase.storage.from(bucketName).remove([storageFilename]);
       
       logError(`Failed to update fish ${fishId} sprite_url`, updateError);
+      throw new Error(`Database update failed: ${updateError.message}`);
+    }
+
+    return publicUrl;
+  }
+
+  /**
+   * Uploads a sprite for a tank.
+   * 
+   * Validates the file type (image only) and size, uploads it to Supabase Storage,
+   * and updates the tank record with the public URL.
+   * 
+   * @param file - File object containing buffer and metadata
+   * @param tankId - ID of the tank to associate the asset with
+   * @returns Public URL of the uploaded asset
+   * @throws {ValidationError} If file is invalid
+   * @throws {NotFoundError} If tank doesn't exist
+   */
+  async uploadTankSprite(file: UploadFile, tankId: number): Promise<string> {
+    // 1. Validate inputs
+    if (!file || !file.file) {
+      throw new ValidationError('No file provided');
+    }
+
+    if (!tankId || isNaN(tankId)) {
+      throw new ValidationError('Invalid tank ID');
+    }
+
+    // Validate file size
+    if (file.file.length > MAX_FILE_SIZE) {
+      throw new ValidationError(`File size exceeds limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    }
+
+    // Validate MIME type (image only for tanks)
+    if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
+      throw new ValidationError(`File type ${file.mimetype} not allowed. Only image files are supported.`);
+    }
+
+    // Validate extension (image only for tanks)
+    const extension = this.getFileExtension(file.filename);
+    if (!ALLOWED_IMAGE_EXTENSIONS.includes(extension)) {
+      throw new ValidationError(`File extension ${extension} not allowed. Only image files are supported.`);
+    }
+
+    const supabase = getSupabaseClient();
+
+    // 2. Validate tank existence
+    const { data: tank, error: fetchError } = await supabase
+      .from('tanks')
+      .select('id, owner')
+      .eq('id', tankId)
+      .single();
+
+    if (fetchError || !tank) {
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        logError(`Database error checking tank ${tankId}`, fetchError);
+        throw new Error(`Database error: ${fetchError.message}`);
+      }
+      throw new NotFoundError(`Tank with ID ${tankId} not found`);
+    }
+
+    // 3. Prepare file for upload
+    // Filename format: tank-{tankId}.{ext}
+    const storageFilename = `tank-${tankId}${extension}`;
+    const bucketName = 'tanks';
+
+    // 4. Upload to Supabase Storage
+    const { error: uploadError } = await supabase
+      .storage
+      .from(bucketName)
+      .upload(storageFilename, file.file, {
+        contentType: file.mimetype,
+        upsert: true // Allow overwriting existing sprites
+      });
+
+    if (uploadError) {
+      logError(`Failed to upload asset for tank ${tankId}`, uploadError);
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    }
+
+    // 5. Get Public URL
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from(bucketName)
+      .getPublicUrl(storageFilename);
+
+    // 6. Update tank record with sprite_url
+    const { error: updateError } = await supabase
+      .from('tanks')
+      .update({ sprite_url: publicUrl })
+      .eq('id', tankId);
+
+    if (updateError) {
+      // If DB update fails, try to cleanup the uploaded file (best effort)
+      await supabase.storage.from(bucketName).remove([storageFilename]);
+      
+      logError(`Failed to update tank ${tankId} sprite_url`, updateError);
       throw new Error(`Database update failed: ${updateError.message}`);
     }
 
