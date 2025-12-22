@@ -71,3 +71,46 @@ export async function getDecorationsByOwner(
     return createErrorResponse(error);
   }
 }
+
+/**
+ * POST /decoration/:id/activate
+ * 
+ * Activates a decoration, making its XP multiplier apply to fish XP gains
+ * in the associated tank.
+ * 
+ * @param request - Fastify request with id parameter and owner in body
+ * @param reply - Fastify reply
+ * @returns Updated Decoration data or error response
+ */
+export async function activateDecoration(
+  request: FastifyRequest<{ 
+    Params: { id: string }, 
+    Body: { owner: string } 
+  }>,
+  _reply: FastifyReply
+): Promise<ControllerResponse<Decoration>> {
+  try {
+    const { id } = request.params;
+    const { owner } = request.body;
+
+    const decorationId = parseInt(id, 10);
+    
+    // Basic validation before service call (service does stricter validation)
+    if (isNaN(decorationId)) {
+      throw new ValidationError('Invalid decoration ID format');
+    }
+
+    if (!owner) {
+      throw new ValidationError('Owner address is required in request body');
+    }
+
+    const decoration = await decorationService.activateDecoration(decorationId, owner);
+
+    return createSuccessResponse(
+      decoration,
+      'Decoration activated successfully'
+    );
+  } catch (error) {
+    return createErrorResponse(error);
+  }
+}
