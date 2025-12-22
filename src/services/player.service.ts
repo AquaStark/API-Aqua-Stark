@@ -175,13 +175,15 @@ export class PlayerService {
    * 
    * The starter pack includes:
    * - 1 tank (capacity: 10)
-   * - 2 fish (species: "Starter Fish", random DNA)
+   * - 2 fish (species: "Starter Fish", random DNA, assigned to the new tank)
    * 
    * Flow:
    * 1. Validate player exists and has no starter pack yet
    * 2. Mint all assets on-chain (tank + 2 fish)
-   * 3. Save all assets to Supabase with rollback on failure
+   * 3. Save all assets to Supabase with tank_id assignment
    * 4. Update player's fish_count
+   * 
+   * Note: Fish are automatically assigned to the newly created tank via tank_id.
    * 
    * @param address - Player's wallet address
    * @returns Object with tank_id and fish_ids
@@ -338,7 +340,7 @@ export class PlayerService {
         tankSaved = true;
       }
 
-      // Save fish #1 to Supabase
+      // Save fish #1 to Supabase with tank assignment
       const { data: fish1Data, error: fish1InsertError } = await supabase
         .from('fish')
         .insert({
@@ -346,6 +348,7 @@ export class PlayerService {
           owner: trimmedAddress,
           species: STARTER_PACK_FISH_SPECIES,
           image_url: STARTER_PACK_FISH_IMAGE_URL,
+          tank_id: tankResult.tank_id,
         })
         .select();
 
@@ -375,7 +378,7 @@ export class PlayerService {
         fish1Saved = true;
       }
 
-      // Save fish #2 to Supabase
+      // Save fish #2 to Supabase with tank assignment
       const { data: fish2Data, error: fish2InsertError } = await supabase
         .from('fish')
         .insert({
@@ -383,6 +386,7 @@ export class PlayerService {
           owner: trimmedAddress,
           species: STARTER_PACK_FISH_SPECIES,
           image_url: STARTER_PACK_FISH_IMAGE_URL,
+          tank_id: tankResult.tank_id,
         })
         .select();
 
