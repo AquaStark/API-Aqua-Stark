@@ -18,6 +18,7 @@ export interface TankOffChain {
   owner: string;
   createdAt: Date;
   name?: string;
+  sprite_url?: string;
 }
 
 export interface Tank extends TankOnChain, Omit<TankOffChain, 'id' | 'owner'> {
