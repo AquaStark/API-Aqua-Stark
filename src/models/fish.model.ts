@@ -21,6 +21,7 @@ export interface FishOffChain {
   owner: string;
   species: string;
   imageUrl: string;
+  spriteUrl?: string; // URL to 2D sprite or 3D asset for Unity
   createdAt: Date;
   tankId?: number; // Reference to the tank this fish belongs to
 }
