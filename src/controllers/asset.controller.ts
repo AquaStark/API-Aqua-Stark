@@ -122,3 +122,58 @@ export async function uploadTankSprite(
   }
 }
 
+/**
+ * POST /asset/decoration/:id/sprite
+ * 
+ * Uploads a sprite for a specific decoration.
+ * Supports multipart/form-data.
+ * 
+ * @param request - Fastify request with file and id parameter
+ * @param reply - Fastify reply
+ * @returns Uploaded asset URL or error response
+ */
+export async function uploadDecorationSprite(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  _reply: FastifyReply
+): Promise<ControllerResponse<{ sprite_url: string }>> {
+  try {
+    const { id } = request.params;
+    const decorationId = parseInt(id, 10);
+    
+    if (isNaN(decorationId)) {
+      throw new Error('Invalid decoration ID format');
+    }
+
+    // Check if request is multipart
+    if (!request.isMultipart()) {
+      throw new Error('Request must be multipart/form-data');
+    }
+
+    // Get the file from request
+    // We expect a single file field named 'file'
+    const data = await request.file();
+    
+    if (!data) {
+      throw new Error('No file uploaded');
+    }
+
+    // Read the file buffer
+    const buffer = await data.toBuffer();
+
+    // Call service to process upload
+    const spriteUrl = await assetService.uploadDecorationSprite({
+      filename: data.filename,
+      mimetype: data.mimetype,
+      encoding: data.encoding,
+      file: buffer
+    }, decorationId);
+
+    return createSuccessResponse(
+      { sprite_url: spriteUrl },
+      'Decoration asset uploaded successfully'
+    );
+  } catch (error) {
+    return createErrorResponse(error);
+  }
+}
+

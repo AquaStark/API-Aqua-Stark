@@ -261,6 +261,103 @@ export class AssetService {
   }
 
   /**
+   * Uploads a sprite for a decoration.
+   * 
+   * Validates the file type (image only) and size, uploads it to Supabase Storage,
+   * and updates the decoration record with the public URL.
+   * 
+   * @param file - File object containing buffer and metadata
+   * @param decorationId - ID of the decoration to associate the asset with
+   * @returns Public URL of the uploaded asset
+   * @throws {ValidationError} If file is invalid
+   * @throws {NotFoundError} If decoration doesn't exist
+   */
+  async uploadDecorationSprite(file: UploadFile, decorationId: number): Promise<string> {
+    // 1. Validate inputs
+    if (!file || !file.file) {
+      throw new ValidationError('No file provided');
+    }
+
+    if (!decorationId || isNaN(decorationId)) {
+      throw new ValidationError('Invalid decoration ID');
+    }
+
+    // Validate file size
+    if (file.file.length > MAX_FILE_SIZE) {
+      throw new ValidationError(`File size exceeds limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    }
+
+    // Validate MIME type (image only for decorations)
+    if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
+      throw new ValidationError(`File type ${file.mimetype} not allowed. Only image files are supported.`);
+    }
+
+    // Validate extension (image only for decorations)
+    const extension = this.getFileExtension(file.filename);
+    if (!ALLOWED_IMAGE_EXTENSIONS.includes(extension)) {
+      throw new ValidationError(`File extension ${extension} not allowed. Only image files are supported.`);
+    }
+
+    const supabase = getSupabaseClient();
+
+    // 2. Validate decoration existence
+    const { data: decoration, error: fetchError } = await supabase
+      .from('decorations')
+      .select('id, owner')
+      .eq('id', decorationId)
+      .single();
+
+    if (fetchError || !decoration) {
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        logError(`Database error checking decoration ${decorationId}`, fetchError);
+        throw new Error(`Database error: ${fetchError.message}`);
+      }
+      throw new NotFoundError(`Decoration with ID ${decorationId} not found`);
+    }
+
+    // 3. Prepare file for upload
+    // Filename format: decoration-{decorationId}.{ext}
+    const storageFilename = `decoration-${decorationId}${extension}`;
+    const bucketName = 'decorations';
+
+    // 4. Upload to Supabase Storage
+    const { error: uploadError } = await supabase
+      .storage
+      .from(bucketName)
+      .upload(storageFilename, file.file, {
+        contentType: file.mimetype,
+        upsert: true // Allow overwriting existing sprites
+      });
+
+    if (uploadError) {
+      logError(`Failed to upload asset for decoration ${decorationId}`, uploadError);
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    }
+
+    // 5. Get Public URL
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from(bucketName)
+      .getPublicUrl(storageFilename);
+
+    // 6. Update decoration record with image_url
+    const { error: updateError } = await supabase
+      .from('decorations')
+      .update({ image_url: publicUrl })
+      .eq('id', decorationId);
+
+    if (updateError) {
+      // If DB update fails, try to cleanup the uploaded file (best effort)
+      await supabase.storage.from(bucketName).remove([storageFilename]);
+      
+      logError(`Failed to update decoration ${decorationId} image_url`, updateError);
+      throw new Error(`Database update failed: ${updateError.message}`);
+    }
+
+    return publicUrl;
+  }
+
+  /**
    * Helper to extract file extension (including dot)
    */
   private getFileExtension(filename: string): string {
