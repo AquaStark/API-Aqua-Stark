@@ -7,7 +7,7 @@
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import multipart from '@fastify/multipart';
-import { uploadFishSprite, uploadTankSprite, uploadDecorationSprite } from '@/controllers/asset.controller';
+import { uploadFishSprite, uploadTankSprite, uploadDecorationSprite, uploadPlayerAvatar } from '@/controllers/asset.controller';
 
 /**
  * Registers asset routes with the Fastify instance.
@@ -36,5 +36,8 @@ export async function assetRoutes(
 
   // POST /asset/decoration/:id/sprite - Upload sprite for a decoration
   app.post('/asset/decoration/:id/sprite', uploadDecorationSprite);
+
+  // POST /asset/player/:address/avatar - Upload avatar for a player
+  app.post('/asset/player/:address/avatar', uploadPlayerAvatar);
 }
 
