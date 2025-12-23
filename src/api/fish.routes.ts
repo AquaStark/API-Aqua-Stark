@@ -5,7 +5,7 @@
  */
 
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getFishById, getFishByOwner, feedFish, breedFish } from '@/controllers/fish.controller';
+import { getFishById, getFishByOwner, getFishFamily, feedFish, breedFish } from '@/controllers/fish.controller';
 
 /**
  * Registers fish routes with the Fastify instance.
@@ -17,6 +17,10 @@ export async function fishRoutes(
   app: FastifyInstance,
   _options: FastifyPluginOptions
 ): Promise<void> {
+  // GET /fish/:id/family - Get complete family tree of a fish
+  // Must be registered before /fish/:id to avoid route conflicts
+  app.get('/fish/:id/family', getFishFamily);
+
   // GET /fish/:id - Get fish details by ID
   app.get('/fish/:id', getFishById);
 
