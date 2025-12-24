@@ -21,8 +21,10 @@ import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getFishOnChain, gainFishXp, gainPlayerXp, breedFish as breedFishOnChain } from '@/core/utils/dojo-client';
 import { getActiveDecorationsMultiplier, getFeedBaseXp, calculateFishXp } from '@/core/utils/xp-calculator';
+import { buildFishFamilyTree } from '@/core/utils/fish-genealogy';
 import type { Fish } from '@/models/fish.model';
 import { FishState } from '@/models/fish.model';
+import type { FishFamilyTree } from '@/core/types/dojo-types';
 
 // ============================================================================
 // FISH SERVICE
@@ -217,6 +219,36 @@ export class FishService {
         `Failed to retrieve on-chain data for fish owned by ${address}: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  }
+
+  /**
+   * Retrieves the complete family tree of a fish.
+   * 
+   * Builds and returns the fish's complete lineage including:
+   * - The fish itself (generation 0)
+   * - All ancestors (parents, grandparents, etc.)
+   * - All descendants (children, grandchildren, etc.)
+   * 
+   * Uses the genealogy utility to traverse the family tree from Supabase data.
+   * 
+   * @param fishId - Fish ID
+   * @returns Complete FishFamilyTree with ancestors and descendants
+   * @throws {ValidationError} If ID is invalid
+   * @throws {NotFoundError} If fish doesn't exist
+   */
+  async getFishFamily(fishId: number): Promise<FishFamilyTree> {
+    // Validate ID
+    if (!fishId || fishId <= 0 || !Number.isInteger(fishId)) {
+      throw new ValidationError('Invalid fish ID');
+    }
+
+    // Use genealogy utility to build the complete family tree
+    // This function handles:
+    // - Verifying the fish exists (throws NotFoundError if not)
+    // - Building ancestors tree (upwards)
+    // - Building descendants tree (downwards)
+    // - Preventing infinite recursion with MAX_GENERATION_DEPTH
+    return await buildFishFamilyTree(fishId);
   }
 
   // ============================================================================

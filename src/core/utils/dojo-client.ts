@@ -8,7 +8,7 @@
  * @see docs/dojo-stubs.md for implementation guide
  */
 
-import { DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY } from '../config';
+import { DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY, STARKNET_RPC } from '../config';
 import { logDebug, logInfo, logWarn } from './logger';
 import { getSupabaseClient } from './supabase-client';
 import {
@@ -22,6 +22,7 @@ import {
   TankOnChain,
   DecorationOnChain,
 } from '../types';
+import { RpcProvider } from 'starknet';
 
 // Flag to track if client is initialized
 let isInitialized = false;
@@ -216,6 +217,48 @@ export function initializeDojoClient(): boolean {
  */
 export function isDojoClientReady(): boolean {
   return isInitialized;
+}
+
+/**
+ * Validates the connection to Dojo/Starknet RPC.
+ * Performs a lightweight health check by querying the chain ID.
+ * 
+ * @param timeoutMs - Timeout in milliseconds (default: 5000)
+ * @returns Promise<boolean> True if connection is successful, false otherwise
+ */
+export async function validateDojoConnection(timeoutMs: number = 5000): Promise<boolean> {
+  try {
+    // Check if client is initialized
+    if (!isInitialized) {
+      return false;
+    }
+
+    // If running in stub mode (no credentials), consider it healthy
+    // since stub mode is a valid operational state
+    if (!DOJO_ACCOUNT_ADDRESS || !DOJO_PRIVATE_KEY) {
+      return true; // Stub mode is valid
+    }
+
+    // Try to connect to Starknet RPC with timeout
+    const provider = new RpcProvider({ nodeUrl: STARKNET_RPC });
+    
+    // Create a promise that will timeout
+    const timeoutPromise = new Promise<boolean>((_, reject) => {
+      setTimeout(() => reject(new Error('Connection timeout')), timeoutMs);
+    });
+
+    // Try to get chain ID as a health check
+    const healthCheckPromise = provider.getChainId()
+      .then(() => true)
+      .catch(() => false);
+
+    // Race between health check and timeout
+    const result = await Promise.race([healthCheckPromise, timeoutPromise]);
+    return result as boolean;
+  } catch (error) {
+    logDebug('Dojo/Starknet connection validation failed:', error);
+    return false;
+  }
 }
 
 // ============================================================================

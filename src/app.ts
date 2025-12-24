@@ -27,16 +27,14 @@ export async function createApp(): Promise<FastifyInstance> {
   // Initialize global logger with Fastify instance
   initializeLogger(app);
 
+  // Decorate app with start time for uptime calculation
+  app.decorate('startTime', Date.now());
+
   // Register global error handler
   app.setErrorHandler(errorHandler);
 
   // Register routes
   await registerRoutes(app);
-
-  // Health check endpoint
-  app.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
-  });
 
   return app;
 }

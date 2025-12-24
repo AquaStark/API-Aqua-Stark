@@ -12,6 +12,7 @@ import { fishRoutes } from '@/api/fish.routes';
 import { tankRoutes } from '@/api/tank.routes';
 import { decorationRoutes } from '@/api/decoration.routes';
 import { assetRoutes } from '@/api/asset.routes';
+import { healthRoutes } from '@/api/health.routes';
 
 /**
  * Registers all API routes with the Fastify instance.
@@ -20,6 +21,7 @@ import { assetRoutes } from '@/api/asset.routes';
  */
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // Register route modules here
+  await app.register(healthRoutes, { prefix: '/api' });
   await app.register(authRoutes, { prefix: '/api' });
   await app.register(playerRoutes, { prefix: '/api' });
   await app.register(fishRoutes, { prefix: '/api' });
