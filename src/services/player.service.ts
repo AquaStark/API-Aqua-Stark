@@ -18,6 +18,7 @@ import {
   mintFish,
   generateRandomDna,
 } from '@/core/utils/dojo-client';
+import { SyncService } from '@/services/sync.service';
 import type { Player, CreatePlayerDto } from '@/models/player.model';
 import type { MintTankResult, MintFishResult } from '@/core/types';
 
@@ -132,8 +133,9 @@ export class PlayerService {
     }
 
     // Register player on-chain
+    let registerTxHash: string;
     try {
-      await registerPlayerOnChain(address);
+      registerTxHash = await registerPlayerOnChain(address);
     } catch (error) {
       // If on-chain registration fails, we should still have the Supabase record
       // but we throw an error to indicate the operation wasn't fully successful
@@ -141,6 +143,19 @@ export class PlayerService {
         `Failed to register player on-chain: ${error instanceof Error ? error.message : 'Unknown error'}`,
         undefined
       );
+    }
+
+    // Add player registration to sync queue
+    try {
+      const syncService = new SyncService();
+      await syncService.addToSyncQueue(registerTxHash, 'player', address.trim());
+    } catch (syncError) {
+      // Log error but don't fail the operation - sync queue is for tracking
+      logError('Failed to add player registration to sync queue', { 
+        error: syncError, 
+        tx_hash: registerTxHash, 
+        address: address.trim() 
+      });
     }
 
     // Mint starter pack for new player (1 tank + 2 fish)
@@ -431,6 +446,54 @@ export class PlayerService {
       if (!updateData || updateData.length === 0) {
         logError('Player update returned no data', { address: trimmedAddress });
         throw new Error('Failed to update fish_count: No data returned from update');
+      }
+
+      // Add all on-chain transactions to sync queue
+      const syncService = new SyncService();
+      
+      // Add tank mint to sync queue
+      try {
+        await syncService.addToSyncQueue(
+          tankResult.tx_hash,
+          'tank',
+          tankResult.tank_id.toString()
+        );
+      } catch (syncError) {
+        logError('Failed to add tank mint to sync queue', {
+          error: syncError,
+          tx_hash: tankResult.tx_hash,
+          tank_id: tankResult.tank_id,
+        });
+      }
+
+      // Add fish #1 mint to sync queue
+      try {
+        await syncService.addToSyncQueue(
+          fish1Result.tx_hash,
+          'fish',
+          fish1Result.fish_id.toString()
+        );
+      } catch (syncError) {
+        logError('Failed to add fish #1 mint to sync queue', {
+          error: syncError,
+          tx_hash: fish1Result.tx_hash,
+          fish_id: fish1Result.fish_id,
+        });
+      }
+
+      // Add fish #2 mint to sync queue
+      try {
+        await syncService.addToSyncQueue(
+          fish2Result.tx_hash,
+          'fish',
+          fish2Result.fish_id.toString()
+        );
+      } catch (syncError) {
+        logError('Failed to add fish #2 mint to sync queue', {
+          error: syncError,
+          tx_hash: fish2Result.tx_hash,
+          fish_id: fish2Result.fish_id,
+        });
       }
 
       // All successful!

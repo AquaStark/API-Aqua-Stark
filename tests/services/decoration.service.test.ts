@@ -18,6 +18,12 @@ vi.mock('@/core/utils/logger', () => ({
   logError: vi.fn(),
 }));
 
+vi.mock('@/services/sync.service', () => ({
+  SyncService: vi.fn().mockImplementation(() => ({
+    addToSyncQueue: vi.fn().mockResolvedValue({}),
+  })),
+}));
+
 // Now import after mocks
 import { DecorationService } from '@/services/decoration.service';
 import { ValidationError, NotFoundError, ConflictError, OnChainError } from '@/core/errors';
