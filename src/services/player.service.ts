@@ -19,7 +19,11 @@ import {
   generateRandomDna,
 } from '@/core/utils/dojo-client';
 import { SyncService } from '@/services/sync.service';
-import type { Player, CreatePlayerDto } from '@/models/player.model';
+import { TankService } from '@/services/tank.service';
+import { FishService } from '@/services/fish.service';
+import { DecorationService } from '@/services/decoration.service';
+import type { Player, CreatePlayerDto, PlayerProfile } from '@/models/player.model';
+import type { Tank } from '@/models/tank.model';
 import type { MintTankResult, MintFishResult } from '@/core/types';
 
 // ============================================================================
@@ -525,14 +529,15 @@ export class PlayerService {
   // ============================================================================
 
   /**
-   * Retrieves a player by their Starknet address.
+   * Retrieves a complete player profile by their Starknet address.
+   * Includes player data along with all owned tanks, fish, and decorations.
    * 
    * @param address - Starknet wallet address
-   * @returns Player data
+   * @returns Complete PlayerProfile with all related assets
    * @throws ValidationError if address is invalid
    * @throws NotFoundError if player doesn't exist
    */
-  async getPlayerByAddress(address: string): Promise<Player> {
+  async getPlayerByAddress(address: string): Promise<PlayerProfile> {
     // Validate address
     if (!address || address.trim().length === 0) {
       throw new ValidationError('Address is required');
@@ -545,12 +550,13 @@ export class PlayerService {
     }
 
     const supabase = getSupabaseClient();
+    const trimmedAddress = address.trim();
 
-    // Query Supabase
+    // Query Supabase for player
     const { data, error } = await supabase
       .from('players')
       .select('*')
-      .eq('address', address.trim())
+      .eq('address', trimmedAddress)
       .single();
 
     // Handle Supabase errors
@@ -568,7 +574,49 @@ export class PlayerService {
       throw new NotFoundError(`Player with address ${address} not found`);
     }
 
-    return this.mapSupabaseToPlayer(data);
+    const player = this.mapSupabaseToPlayer(data);
+
+    // Get all related assets in parallel to avoid N+1 queries
+    const tankService = new TankService();
+    const fishService = new FishService();
+    const decorationService = new DecorationService();
+
+    const [tanksWithExtras, fish, decorations] = await Promise.all([
+      tankService.getTanksByOwner(trimmedAddress),
+      fishService.getFishByOwner(trimmedAddress),
+      decorationService.getDecorationsByOwner(trimmedAddress),
+    ]);
+
+    // Map tanks to remove extra fields (fishCount, capacityUsage) and keep only Tank fields
+    const tanks: Tank[] = tanksWithExtras.map((tank) => {
+      const baseTank: Tank = {
+        id: tank.id,
+        owner: tank.owner,
+        capacity: tank.capacity,
+        createdAt: tank.createdAt,
+      };
+      
+      // Add optional fields only if they exist
+      if (tank.name !== null && tank.name !== undefined) {
+        baseTank.name = tank.name;
+      }
+      
+      if (tank.sprite_url !== null && tank.sprite_url !== undefined) {
+        baseTank.sprite_url = tank.sprite_url;
+      }
+      
+      return baseTank;
+    });
+
+    // Build and return complete player profile
+    const playerProfile: PlayerProfile = {
+      ...player,
+      tanks,
+      fish,
+      decorations,
+    };
+
+    return playerProfile;
   }
 
   // ============================================================================
