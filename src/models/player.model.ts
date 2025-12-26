@@ -6,6 +6,10 @@
  * Split into on-chain (Dojo/Starknet) and off-chain (Supabase) fields.
  */
 
+import type { Tank } from './tank.model';
+import type { Fish } from './fish.model';
+import type { Decoration } from './decoration.model';
+
 // On-chain fields (from Dojo/Starknet)
 export interface PlayerOnChain {
   address: string;
@@ -40,4 +44,14 @@ export interface UpdatePlayerDto {
   reputation?: number;
   offspring_created?: number;
   avatar_url?: string;
+}
+
+/**
+ * Extended player profile that includes all related assets.
+ * Used in GET /player/:address endpoint to return complete player data.
+ */
+export interface PlayerProfile extends Player {
+  tanks: Tank[];
+  fish: Fish[];
+  decorations: Decoration[];
 }
