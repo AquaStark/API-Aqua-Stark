@@ -17,6 +17,7 @@
 
 import { ValidationError, NotFoundError, OnChainError } from '@/core/errors';
 import { TankService } from '@/services/tank.service';
+import { SyncService } from '@/services/sync.service';
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getFishOnChain, gainFishXp, gainPlayerXp, breedFish as breedFishOnChain } from '@/core/utils/dojo-client';
@@ -478,37 +479,25 @@ export class FishService {
       throw new Error(`Failed to update player total_xp: ${updateError.message}`);
     }
 
-    // Add sync queue entries for all on-chain XP operations
+    // Add sync queue entries for all on-chain XP operations using SyncService
+    const syncService = new SyncService();
+
     // Entry for each fish XP gain
     for (const { fishId, txHash } of fishXpTxHashes) {
-      const { error: syncError } = await supabase
-        .from('sync_queue')
-        .insert({
-          tx_hash: txHash,
-          entity_type: 'fish',
-          entity_id: fishId.toString(),
-          status: 'pending',
-        });
-
-      if (syncError) {
+      try {
+        await syncService.addToSyncQueue(txHash, 'fish', fishId.toString());
+      } catch (syncError) {
         // Log error but don't fail the operation - sync queue is for tracking
         logError(`Failed to add fish XP sync queue entry for fish ${fishId}`, { error: syncError, tx_hash: txHash });
       }
     }
 
     // Entry for player XP gain
-    const { error: playerSyncError } = await supabase
-      .from('sync_queue')
-      .insert({
-        tx_hash: playerXpTxHash,
-        entity_type: 'player',
-        entity_id: trimmedOwner,
-        status: 'pending',
-      });
-
-    if (playerSyncError) {
+    try {
+      await syncService.addToSyncQueue(playerXpTxHash, 'player', trimmedOwner);
+    } catch (syncError) {
       // Log error but don't fail the operation - sync queue is for tracking
-      logError(`Failed to add player XP sync queue entry for ${trimmedOwner}`, { error: playerSyncError, tx_hash: playerXpTxHash });
+      logError(`Failed to add player XP sync queue entry for ${trimmedOwner}`, { error: syncError, tx_hash: playerXpTxHash });
     }
 
     // Return the player XP transaction hash as the main result
@@ -642,6 +631,23 @@ export class FishService {
     }
 
     const newFishId = breedResult.fish_id;
+
+    // Add breed transaction to sync queue
+    try {
+      const syncService = new SyncService();
+      await syncService.addToSyncQueue(
+        breedResult.tx_hash,
+        'fish',
+        newFishId.toString()
+      );
+    } catch (syncError) {
+      // Log error but don't fail the operation - sync queue is for tracking
+      logError('Failed to add breed fish transaction to sync queue', {
+        error: syncError,
+        tx_hash: breedResult.tx_hash,
+        fish_id: newFishId,
+      });
+    }
 
     // Determine species for the new fish
     // For now, inherit from the first parent (simple logic)
