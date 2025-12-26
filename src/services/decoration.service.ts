@@ -13,6 +13,7 @@ import { ValidationError, NotFoundError, OnChainError, ConflictError } from '@/c
 import { getSupabaseClient } from '@/core/utils/supabase-client';
 import { logError } from '@/core/utils/logger';
 import { getDecorationOnChain, activateDecoration as activateDecorationOnChain, deactivateDecoration as deactivateDecorationOnChain } from '@/core/utils/dojo-client';
+import { SyncService } from '@/services/sync.service';
 import type { Decoration, DecorationKind } from '@/models/decoration.model';
 
 // ============================================================================
@@ -258,13 +259,27 @@ export class DecorationService {
     }
 
     // Call on-chain activateDecoration function
+    let activateTxHash: string;
     try {
-      await activateDecorationOnChain(id);
+      activateTxHash = await activateDecorationOnChain(id);
     } catch (error) {
       logError(`Failed to activate decoration ${id} on-chain`, error);
       throw new OnChainError(
         `Failed to activate decoration ${id} on-chain: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+
+    // Add activation transaction to sync queue
+    try {
+      const syncService = new SyncService();
+      await syncService.addToSyncQueue(activateTxHash, 'decoration', id.toString());
+    } catch (syncError) {
+      // Log error but don't fail the operation - sync queue is for tracking
+      logError('Failed to add decoration activation to sync queue', {
+        error: syncError,
+        tx_hash: activateTxHash,
+        decoration_id: id,
+      });
     }
 
     // Update is_active to true in Supabase
@@ -340,13 +355,27 @@ export class DecorationService {
     }
 
     // Call on-chain deactivateDecoration function
+    let deactivateTxHash: string;
     try {
-      await deactivateDecorationOnChain(id);
+      deactivateTxHash = await deactivateDecorationOnChain(id);
     } catch (error) {
       logError(`Failed to deactivate decoration ${id} on-chain`, error);
       throw new OnChainError(
         `Failed to deactivate decoration ${id} on-chain: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+
+    // Add deactivation transaction to sync queue
+    try {
+      const syncService = new SyncService();
+      await syncService.addToSyncQueue(deactivateTxHash, 'decoration', id.toString());
+    } catch (syncError) {
+      // Log error but don't fail the operation - sync queue is for tracking
+      logError('Failed to add decoration deactivation to sync queue', {
+        error: syncError,
+        tx_hash: deactivateTxHash,
+        decoration_id: id,
+      });
     }
 
     // Update is_active to false in Supabase
