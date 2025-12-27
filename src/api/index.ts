@@ -6,13 +6,13 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { authRoutes } from '@/api/auth.routes';
-import { playerRoutes } from '@/api/player.routes';
-import { fishRoutes } from '@/api/fish.routes';
-import { tankRoutes } from '@/api/tank.routes';
-import { decorationRoutes } from '@/api/decoration.routes';
-import { assetRoutes } from '@/api/asset.routes';
-import { healthRoutes } from '@/api/health.routes';
+import { authRoutes } from './auth.routes';
+import { playerRoutes } from './player.routes';
+import { fishRoutes } from './fish.routes';
+import { tankRoutes } from './tank.routes';
+import { decorationRoutes } from './decoration.routes';
+import { assetRoutes } from './asset.routes';
+import { healthRoutes } from './health.routes';
 
 /**
  * Registers all API routes with the Fastify instance.
