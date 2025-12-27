@@ -43,7 +43,8 @@ export async function displayServerBanner(): Promise<void> {
 📋  Available Endpoints:
    
    General:
-   • GET  /health                        Health check
+   • GET  /api/health                    Health check
+   • GET  /api/status                    System status with service health checks
    • GET  /api                           API info
    
    Authentication:
@@ -58,15 +59,22 @@ export async function displayServerBanner(): Promise<void> {
    • GET  /api/player/:address/fish      Get all fish owned by a player
    • POST /api/fish/feed                 Feed multiple fish in batch
    • POST /api/fish/breed                Breed two fish together
-   • POST /api/asset/fish/:id/sprite     Upload fish sprite/3D asset
    
    Tanks:
    • GET  /api/tank/:id                  Get tank details by ID
+   • GET  /api/player/:address/tanks     Get all tanks owned by a player
    
    Decorations:
    • GET  /api/decoration/:id            Get decoration details by ID
    • GET  /api/player/:address/decorations Get all decorations owned by a player
-   • POST /api/decoration/:id/activate    Activate a decoration
+   • POST /api/decoration/:id/activate   Activate a decoration
+   • POST /api/decoration/:id/deactivate Deactivate a decoration
+   
+   Assets:
+   • POST /api/asset/fish/:id/sprite     Upload fish sprite/3D asset
+   • POST /api/asset/tank/:id/sprite     Upload tank sprite
+   • POST /api/asset/decoration/:id/sprite Upload decoration sprite
+   • POST /api/asset/player/:address/avatar Upload player avatar
 
 ⏰  Started at:        ${startTime}
   `;
