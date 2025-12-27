@@ -42,6 +42,7 @@ npm start
 All documentation is available in the `/docs` directory:
 
 - [Getting Started](./docs/getting-started.md) - Setup and development guide
+- [Deployment](./docs/deployment.md) - Deployment guide for all environments
 - [Architecture](./docs/architecture.md) - System architecture and design
 - [Standards](./docs/standards.md) - Coding standards and conventions
 - [Error Handling](./docs/error-handling.md) - Error management system
