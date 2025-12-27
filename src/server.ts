@@ -6,6 +6,7 @@
  */
 
 import { createApp, startServer } from './app';
+import { setupGracefulShutdown } from './core/utils/shutdown';
 
 /**
  * Main function that initializes and starts the server.
@@ -13,6 +14,9 @@ import { createApp, startServer } from './app';
 async function main(): Promise<void> {
   const app = await createApp();
   await startServer(app);
+  
+  // Setup graceful shutdown handlers after server starts successfully
+  setupGracefulShutdown(app);
 }
 
 // Start the server
