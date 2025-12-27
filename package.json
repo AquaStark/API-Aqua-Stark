@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@dojoengine/core": "1.8.5",
-    "@fastify/cors": "^11.2.0",
+    "@fastify/cors": "^8.4.0",
     "@fastify/multipart": "^8.3.1",
     "@supabase/supabase-js": "2.38.3",
     "@types/pg": "^8.15.6",
