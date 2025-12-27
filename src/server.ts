@@ -5,6 +5,9 @@
  * Creates the app and starts the server.
  */
 
+// Register tsconfig-paths to resolve @/* aliases at runtime
+import 'tsconfig-paths/register';
+
 import { createApp, startServer } from './app';
 import { setupGracefulShutdown } from './core/utils/shutdown';
 
