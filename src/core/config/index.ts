@@ -44,6 +44,10 @@ export const CARTRIDGE_AUTH_URL = requireEnv('CARTRIDGE_AUTH_URL');
 export const PORT = parseInt(getEnv('PORT', '3000'), 10);
 export const NODE_ENV = getEnv('NODE_ENV', 'development');
 
+// CORS Configuration
+export const CORS_ORIGIN = process.env.CORS_ORIGIN;
+export const CORS_CREDENTIALS = getEnv('CORS_CREDENTIALS', 'true') === 'true';
+
 // Dojo Configuration (optional)
 export const DOJO_ACCOUNT_ADDRESS = process.env.DOJO_ACCOUNT_ADDRESS;
 export const DOJO_PRIVATE_KEY = process.env.DOJO_PRIVATE_KEY;

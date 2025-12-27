@@ -7,6 +7,7 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import { errorHandler } from './core/middleware/error-handler';
+import { registerCors } from './core/middleware/cors';
 import { registerRoutes } from './api';
 import { PORT, NODE_ENV } from './core/config';
 import { displayServerBanner } from './core/utils/server-banner';
@@ -26,6 +27,9 @@ export async function createApp(): Promise<FastifyInstance> {
 
   // Initialize global logger with Fastify instance
   initializeLogger(app);
+
+  // Register CORS middleware
+  await registerCors(app);
 
   // Decorate app with start time for uptime calculation
   app.decorate('startTime', Date.now());

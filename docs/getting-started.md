@@ -37,24 +37,43 @@ cp .env.example .env
 Edit `.env` with your credentials:
 
 ```env
-# Supabase Configuration
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_supabase_anon_key
+# =============================================================================
+# SUPABASE CONFIGURATION
+# =============================================================================
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_KEY=your_supabase_anon_key_here
+SUPABASE_DB_URL=your_db_url_here
+SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_DB_PASSWORD=your_supabase_password
 
-# Starknet Configuration
+# =============================================================================
+# STARKNET CONFIGURATION
+# =============================================================================
 STARKNET_RPC=https://starknet-mainnet.public.blastapi.io
 STARKNET_CHAIN_ID=SN_MAIN
 
-# Cartridge Authentication
+# =============================================================================
+# CARTRIDGE AUTHENTICATION
+# =============================================================================
 CARTRIDGE_AUTH_URL=https://cartridge.gg/auth
 
-# Server Configuration
-PORT=3000
+# =============================================================================
+# SERVER CONFIGURATION
+# =============================================================================
+PORT=4000
 NODE_ENV=development
 
-# Dojo Configuration (optional)
+# =============================================================================
+# DOJO CONFIGURATION (Optional)
+# =============================================================================
 DOJO_ACCOUNT_ADDRESS=
 DOJO_PRIVATE_KEY=
+
+# =============================================================================
+# CORS Configuration
+# =============================================================================
+CORS_ORIGIN=
+CORS_CREDENTIALS=true
 ```
 
 ### 4. Verify Installation
@@ -308,6 +327,36 @@ npm install
 - Ensure `.env` file exists in root directory
 - Check variable names match exactly
 - Restart development server after changes
+
+### CORS Issues
+
+If you're experiencing CORS errors when making requests from your frontend:
+
+**Development:**
+- Leave `CORS_ORIGIN` empty or unset to allow all origins
+- This is suitable for local development
+
+**Production:**
+- Set `CORS_ORIGIN` to a comma-separated list of allowed origins
+- Example: `CORS_ORIGIN=https://yourdomain.com,https://app.yourdomain.com`
+- Ensure `CORS_CREDENTIALS=true` if you need to send cookies or authentication headers
+
+**Common CORS Errors:**
+- `Access-Control-Allow-Origin` error: Check that your frontend origin is included in `CORS_ORIGIN`
+- `Access-Control-Allow-Credentials` error: Ensure `CORS_CREDENTIALS=true` in your `.env` file
+- Preflight requests failing: Verify that OPTIONS method is allowed (configured by default)
+
+**Testing CORS:**
+- Check browser console for CORS error messages
+- Verify CORS headers in the response using browser DevTools Network tab
+- Test with curl to verify CORS headers are present:
+  ```bash
+  curl -H "Origin: https://yourdomain.com" \
+       -H "Access-Control-Request-Method: POST" \
+       -H "Access-Control-Request-Headers: Content-Type" \
+       -X OPTIONS \
+       http://localhost:3000/api/health
+  ```
 
 ## Getting Help
 
