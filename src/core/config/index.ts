@@ -52,6 +52,9 @@ export const CORS_CREDENTIALS = getEnv('CORS_CREDENTIALS', 'true') === 'true';
 export const DOJO_ACCOUNT_ADDRESS = process.env.DOJO_ACCOUNT_ADDRESS;
 export const DOJO_PRIVATE_KEY = process.env.DOJO_PRIVATE_KEY;
 
+// Shutdown Configuration
+export const SHUTDOWN_TIMEOUT = parseInt(getEnv('SHUTDOWN_TIMEOUT', '10000'), 10);
+
 // Game Constants
 export const MAX_TANK_CAPACITY = 50;
 export const XP_MULTIPLIER = 1.0;
